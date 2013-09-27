@@ -32,13 +32,13 @@ class MyDaemon(Daemon):
 				httpd.server_close()
 				print time.asctime(), "Server Stops - %s:%s" % (HOST_NAME, PORT_NUMBER)
 
+		try:
+
 			while 1:
 				flowrec = s.recv(1024)
 				flow = flowd.Flow(blob = flowrec)
 
-				jsondata = json.dumps({'src_addr': flow.src_addr, 
-										'proto':flow.protocol,
-										'port':flow.dst_port})
+                                jsondata = jsonify_netflow(flow)
 				
 				connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
 				channel = connection.channel()
@@ -54,6 +54,12 @@ class MyDaemon(Daemon):
 		except:
 			os.unlink(args[0])
 			raise
+
+        def jsonify_netflow(netflow_rec):
+            jsondata = json.dumps({'src_addr': flow.src_addr, 
+                'proto':flow.protocol,
+                'port':flow.dst_port})
+            return jsondata
 
 class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
      def do_HEAD(s):
@@ -82,7 +88,7 @@ if __name__ == "__main__":
 		else:
 			print "Unknown command"
 			sys.exit(2)
-			sys.exit(0)
+		sys.exit(0)
 	else:
 		print "usage: %s start|stop|restart" % sys.argv[0]
 		sys.exit(2)
