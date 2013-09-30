@@ -14,29 +14,28 @@ import logging
 from daemon import Daemon
 
 class MyDaemon(Daemon):
-	def run(self):
-		s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-		s.bind("/tmp/flowd.sock")
+    def run(self):
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+        s.bind("/tmp/flowd.sock")
 
-		HOST_NAME = '127.0.0.1'
-		PORT_NUMBER = 8000
+        HOST_NAME = '127.0.0.1'
+        PORT_NUMBER = 8000
 
-		try:
+        try:
+            httpd = server_class((HOST_NAME, PORT_NUMBER), MyHandler)
+            log.info(time.asctime() + "Server Starts - %s:%s" % (HOST_NAME, PORT_NUMBER))
+            try:
+                httpd.serve_forever()
+            except KeyboardInterrupt:
+                pass
+                httpd.server_close()
+                log.info(time.asctime() + "Server Stops - %s:%s" % (HOST_NAME, PORT_NUMBER))
 
-			server_class = BaseHTTPServer.HTTPServer
-			httpd = server_class((HOST_NAME, PORT_NUMBER), MyHandler)
-			print time.asctime(), "Server Starts - %s:%s" % (HOST_NAME, PORT_NUMBER)
-			try:
-				httpd.serve_forever()
-			except KeyboardInterrupt:
-				pass
-				httpd.server_close()
-				print time.asctime(), "Server Stops - %s:%s" % (HOST_NAME, PORT_NUMBER)
-
-		try:
-
+            while 1:
+                flowrec = s.recv(1024)
+                flow = flowd.Flow(blob = flowrec)
                 jsondata = self.jsonify_netflow(flow)
-                
+            
                 connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
                 channel = connection.channel()
                 channel.queue_declare(queue='netflow')
