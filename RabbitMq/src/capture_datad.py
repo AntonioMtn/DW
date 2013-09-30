@@ -9,6 +9,7 @@ import json
 import pika
 import sys, time
 import BaseHTTPServer
+import logging
 
 from daemon import Daemon
 
@@ -34,32 +35,28 @@ class MyDaemon(Daemon):
 
 		try:
 
-			while 1:
-				flowrec = s.recv(1024)
-				flow = flowd.Flow(blob = flowrec)
+                jsondata = self.jsonify_netflow(flow)
+                
+                connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+                channel = connection.channel()
+                channel.queue_declare(queue='netflow')
+                channel.basic_publish(exchange='',
+                                      routing_key='netflow',
+                                      body=jsondata)
+                
+                logging.info(" [x] Data Sent")
+                connection.close()
 
-                                jsondata = jsonify_netflow(flow)
-				
-				connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-				channel = connection.channel()
-				channel.queue_declare(queue='netflow')
-				channel.basic_publish(exchange='',
-				                      routing_key='netflow',
-				                      body=jsondata)
-				
-				print " [x] Data Sent"
-				connection.close()
+        except Exception, e:
+            logging.info(e)
+            os.unlink(args[0])
+            raise
 
-		
-		except:
-			os.unlink(args[0])
-			raise
-
-        def jsonify_netflow(netflow_rec):
-            jsondata = json.dumps({'src_addr': flow.src_addr, 
-                'proto':flow.protocol,
-                'port':flow.dst_port})
-            return jsondata
+    def jsonify_netflow(self, netflow_rec):
+        jsondata = json.dumps({'src_addr': netflow_rec.src_addr, 
+            'proto':netflow_rec.protocol,
+            'port':netflow_rec.dst_port})
+        return jsondata
 
 class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
      def do_HEAD(s):
@@ -76,19 +73,19 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
          s.wfile.write("</body></html>")
 
 if __name__ == "__main__":
-	daemon = MyDaemon('/tmp/packet_capture.pid')
-	
-	if len(sys.argv) == 2:
-		if 'start' == sys.argv[1]:
-			daemon.start()
-		elif 'stop' == sys.argv[1]:
-			daemon.stop()
-		elif 'restart' == sys.argv[1]:
-			daemon.restart()
-		else:
-			print "Unknown command"
-			sys.exit(2)
-		sys.exit(0)
-	else:
-		print "usage: %s start|stop|restart" % sys.argv[0]
-		sys.exit(2)
+    logging.basicConfig(filename='example.log',level=logging.INFO)
+    daemon = MyDaemon('/tmp/packet_capture.pid')
+    if len(sys.argv) == 2:
+        if 'start' == sys.argv[1]:
+            daemon.start()
+        elif 'stop' == sys.argv[1]:
+            daemon.stop()
+        elif 'restart' == sys.argv[1]:
+            daemon.restart()
+        else:
+            print "Unknown command"
+            sys.exit(2)
+        sys.exit(0)
+    else:
+        print "usage: %s start|stop|restart" % sys.argv[0]
+        sys.exit(2)
