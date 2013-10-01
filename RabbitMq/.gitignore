@@ -1,2 +1,4 @@
 DEV/
+tmp/
 *.swp
+*.pyc
