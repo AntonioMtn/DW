@@ -20,16 +20,18 @@ class MyDaemon(Daemon):
 
         HOST_NAME = '127.0.0.1'
         PORT_NUMBER = 8000
+        logging.info("Binded to sock")
 
         try:
+            server_class = BaseHTTPServer.HTTPServer
             httpd = server_class((HOST_NAME, PORT_NUMBER), MyHandler)
-            log.info(time.asctime() + "Server Starts - %s:%s" % (HOST_NAME, PORT_NUMBER))
+            logging.info(time.asctime() + "Server Starts - %s:%s" % (HOST_NAME, PORT_NUMBER))
             try:
                 httpd.serve_forever()
             except KeyboardInterrupt:
                 pass
                 httpd.server_close()
-                log.info(time.asctime() + "Server Stops - %s:%s" % (HOST_NAME, PORT_NUMBER))
+                logging.info(time.asctime() + "Server Stops - %s:%s" % (HOST_NAME, PORT_NUMBER))
 
             while 1:
                 flowrec = s.recv(1024)
@@ -76,6 +78,7 @@ if __name__ == "__main__":
     daemon = MyDaemon('/tmp/packet_capture.pid')
     if len(sys.argv) == 2:
         if 'start' == sys.argv[1]:
+            logging.info("Start")
             daemon.start()
         elif 'stop' == sys.argv[1]:
             daemon.stop()
