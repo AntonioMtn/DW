@@ -4,8 +4,8 @@
 current_dir=`pwd`
 
 has_virtenv=`which virtualenv 2>&1 > /dev/null`
-if [[ $has_virtenv -ne 0 ]]; then
-  apt-get install python-virtualenv
+if [[ $has_virtenv == "" ]]; then
+  sudo apt-get install python-virtualenv
 fi
 
 #  virtualenv now installed, create the env
